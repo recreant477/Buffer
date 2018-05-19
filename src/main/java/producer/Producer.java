@@ -11,7 +11,7 @@ public class Producer implements Runnable {
 
     private static final Calendar startTime = Calendar.getInstance();
     private static final String FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
-    private static final int MAX_BUFFER = 5;
+    private static final int MAX_SIZE = 30;
 
     private final Buffer buffer;
 
@@ -27,29 +27,32 @@ public class Producer implements Runnable {
     @Override
     public void run() {
         while (isValidMaxTime()) {
-            produce();
-            synchronized (buffer) {
-                if (buffer.getList().size() < MAX_BUFFER) {
-                    try {
-                        buffer.put(new SimpleDateFormat(FORMAT).format(new Date()));
-                    } catch (IOException e) {
-                        System.out.println("Ошибка ввода вывода");
+            try {
+                synchronized (buffer) {
+                    String timestamp = new SimpleDateFormat(FORMAT).format(new Date());
+                    produce();
+                    while (buffer.getList().size() > MAX_SIZE) {
+                        suspendWork();
+                    }
+                    if (buffer.isProducerWorks()) {
+                        buffer.put(timestamp);
                     }
                     buffer.notifyAll();
-                } else {
-                    stopThread();
                 }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
+        buffer.setProducerWorks(false);
     }
 
-    private synchronized boolean isValidMaxTime() {
+    private boolean isValidMaxTime() {
         long currentMillis = Calendar.getInstance().getTimeInMillis();
         long startMillis = startTime.getTimeInMillis();
         return endTimeInSeconds >= currentMillis - startMillis;
     }
 
-    private void stopThread() {
+    private void suspendWork() {
         try {
             buffer.wait();
         } catch (InterruptedException e) {

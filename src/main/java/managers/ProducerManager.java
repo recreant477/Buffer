@@ -1,12 +1,13 @@
-package producer;
+package managers;
 
 import buffer.Buffer;
+import producer.Producer;
 
 import java.util.Scanner;
 
-public class ProducerManager {
+public class ProducerManager extends Thread {
 
-    private static final String COUNT = "Задайте количество генерируещих (producer) : ";
+    private static final String COUNT_PRODUCER = "Задайте количество генерируещих (producer) : ";
     private static final String FREQUENCY = "Задайте частоту работы (producer)) : ";
     private static final String TIME = "Задайте время работы (producer) в миллисекундах) : ";
 
@@ -18,14 +19,18 @@ public class ProducerManager {
 
     public ProducerManager(Buffer buffer) {
         this.buffer = buffer;
-    }
-
-    public void startProcess() {
-        sizeProducers = getData(COUNT);
+        sizeProducers = getData(COUNT_PRODUCER);
         operatingFrequency = getData(FREQUENCY);
         endTimeInSeconds = getData(TIME);
+    }
 
+    @Override
+    public void run() {
         startProducers();
+    }
+
+    public int getEndTimeInSeconds() {
+        return endTimeInSeconds;
     }
 
     private int getData(String template) {
@@ -40,18 +45,6 @@ public class ProducerManager {
     private void startProducers() {
         for (int i = 0; i < sizeProducers; i++) {
             new Thread(new Producer(buffer, operatingFrequency, endTimeInSeconds)).start();
-        }
-        stopProducer();
-    }
-
-    private void stopProducer() {
-        try {
-            Thread.sleep(endTimeInSeconds);
-            synchronized (buffer) {
-                buffer.notifyAll();
-            }
-        } catch (InterruptedException e) {
-            System.out.println("Ошибка ввода вывода");
         }
     }
 }
