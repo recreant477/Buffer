@@ -10,11 +10,11 @@ import java.util.List;
 
 public class Buffer {
 
-    public static volatile int countConsumed = 0;
-    public static volatile int countProducer = 0;
-
     private static final Path PATH = Paths.get("./src/main/resources/buffer.txt");
     private static final String TEMPLATE = "%s %s";
+
+    public static volatile int countConsumed = 0;
+    public static volatile int countProducer = 0;
 
     private volatile boolean producerWorks = true;
 
