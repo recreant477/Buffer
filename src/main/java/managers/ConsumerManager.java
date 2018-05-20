@@ -7,7 +7,7 @@ import java.util.Scanner;
 
 public class ConsumerManager extends Thread {
 
-    private static final String COUNT = "Задайте количество потребляющих(consumer) : ";
+    private static final String COUNT_CONSUMER = "Задайте количество потребляющих(consumer) : ";
 
     private final Buffer buffer;
 
@@ -24,8 +24,17 @@ public class ConsumerManager extends Thread {
     }
 
     private int getSizeConsumer() {
+        int size = getData(COUNT_CONSUMER);
+        if (size <= 0) {
+            System.out.println("Задайте хотя бы один поток");
+            size = getSizeConsumer();
+        }
+        return size;
+    }
+
+    private int getData(String template) {
         Scanner scanner = new Scanner(System.in);
-        System.out.print(COUNT);
+        System.out.print(template);
         if (scanner.hasNextInt()) {
             return scanner.nextInt();
         }

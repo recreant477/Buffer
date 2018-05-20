@@ -19,7 +19,7 @@ public class ProducerManager extends Thread {
 
     public ProducerManager(Buffer buffer) {
         this.buffer = buffer;
-        sizeProducers = getData(COUNT_PRODUCER);
+        sizeProducers = getSizeProducer();
         operatingFrequency = getData(FREQUENCY);
         endTimeInSeconds = getData(TIME);
     }
@@ -40,6 +40,15 @@ public class ProducerManager extends Thread {
             return scanner.nextInt();
         }
         return 0;
+    }
+
+    private int getSizeProducer() {
+        int size = getData(COUNT_PRODUCER);
+        if (size <= 0) {
+            System.out.println("Задайте хотя бы один поток");
+            size = getSizeProducer();
+        }
+        return size;
     }
 
     private void startProducers() {
