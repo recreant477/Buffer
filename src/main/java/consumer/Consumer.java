@@ -14,10 +14,10 @@ public class Consumer implements Runnable {
 
     @Override
     public void run() {
-        while (buffer.isProducerWorks() || !buffer.getList().isEmpty()) {
+        while (buffer.isProducerWorks() || buffer.getOriginalFileBuffer().length() != 0) {
             try {
                 synchronized (buffer) {
-                    if (!buffer.getList().isEmpty()) {
+                    if (buffer.getOriginalFileBuffer().length() > 0) {
                         System.out.println(buffer.get());
                     }
                     buffer.notifyAll();

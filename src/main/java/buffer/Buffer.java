@@ -1,16 +1,13 @@
 package buffer;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.*;
+import java.nio.file.*;
 
 public class Buffer {
 
-    private static final Path PATH = Paths.get("./src/main/resources/buffer.txt");
+    private static final Path FILE_ORIGINAL_PATH = Paths.get("./src/main/resources/buffer/buffer.txt");
+    private static final Path FILE_COPY_PATH = Paths.get("./src/main/resources/buffer/bufferCopy.txt");
+    private static final Path DIRECTORY_PATH = Paths.get("./src/main/resources/buffer");
     private static final String TEMPLATE = "%s %s";
 
     public static volatile int countConsumed = 0;
@@ -18,61 +15,80 @@ public class Buffer {
 
     private volatile boolean producerWorks = true;
 
-    private List<String> list = new ArrayList<>();
+    private File originalFileBuffer;
 
     public Buffer() {
         try {
-            this.list = this.readFileBuffer();
+            this.originalFileBuffer = this.readFileBuffer();
         } catch (IOException e) {
             System.out.println("Ошибка ввода вывода");
         }
     }
 
     public synchronized String get() throws IOException {
+        File original = this.readFileBuffer();
+        File copy = FILE_COPY_PATH.toFile();
         String result = "";
-        list = readFileBuffer();
-        if (list != null && !list.isEmpty()) {
-            result = list.get(0);
-            list.remove(0);
-            writeToFileBuffer();
-            countConsumed++;
+
+        try (BufferedReader br = new BufferedReader(new FileReader(original));
+             BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(copy))) {
+            if ((result = br.readLine()) != null) {
+                String newLine;
+                while ((newLine = br.readLine()) != null) {
+                    bufferedWriter.write(String.valueOf(newLine) + "\n");
+                }
+                countConsumed++;
+            }
+        } catch (IOException ex) {
+            System.out.println(ex.getMessage());
         }
+        original.delete();
+        copy.renameTo(original);
+
         return String.format(TEMPLATE, result, Thread.currentThread().getName());
     }
 
     public synchronized void put(String el) throws IOException {
-        list = readFileBuffer();
-        list.add(el);
-        writeToFileBuffer();
+        try (FileWriter writer = new FileWriter(this.readFileBuffer())) {
+            writer.write(el);
+            writer.write(el + "\n");
+            writer.flush();
+        } catch (IOException ex) {
+            System.out.println(ex.getMessage());
+        }
         countProducer++;
     }
 
-    private void writeToFileBuffer() throws IOException {
-        if (Files.exists(PATH)) {
-            Files.write(PATH, list, StandardCharsets.UTF_8);
-        }
+    private File readFileBuffer() throws IOException {
+        createDirectory();
+        return getFileBuffer();
     }
 
-    private List<String> readFileBuffer() throws IOException {
-        if (Files.exists(PATH)) {
-            return Files.readAllLines(PATH, StandardCharsets.UTF_8);
-        } else {
-            return Files.readAllLines(Files.createFile(PATH));
+    private File getFileBuffer() throws IOException {
+        if (!Files.exists(FILE_ORIGINAL_PATH, LinkOption.NOFOLLOW_LINKS)) {
+            return Files.createFile(FILE_ORIGINAL_PATH).toFile();
+        }
+        return FILE_ORIGINAL_PATH.toFile();
+    }
+
+    private void createDirectory() throws IOException {
+        if (!Files.exists(DIRECTORY_PATH, LinkOption.NOFOLLOW_LINKS)) {
+            Files.createDirectory(FileSystems.getDefault().getPath(DIRECTORY_PATH.toString()));
         }
     }
 
     public synchronized void removeBuffer() {
         try {
-            if (Files.exists(PATH)) {
-                Files.delete(PATH);
+            if (Files.exists(FILE_ORIGINAL_PATH)) {
+                Files.delete(FILE_ORIGINAL_PATH);
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public synchronized List<String> getList() {
-        return list;
+    public synchronized File getOriginalFileBuffer() {
+        return originalFileBuffer;
     }
 
     public synchronized boolean isProducerWorks() {

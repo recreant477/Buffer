@@ -31,7 +31,7 @@ public class Producer implements Runnable {
                 synchronized (buffer) {
                     String timestamp = new SimpleDateFormat(FORMAT).format(new Date());
                     produce();
-                    while (buffer.getList().size() > MAX_SIZE) {
+                    while (buffer.getOriginalFileBuffer().length() > MAX_SIZE) {
                         suspendWork();
                     }
                     if (buffer.isProducerWorks()) {
