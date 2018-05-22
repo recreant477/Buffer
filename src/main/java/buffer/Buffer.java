@@ -5,9 +5,9 @@ import java.nio.file.*;
 
 public class Buffer {
 
-    private static final Path FILE_ORIGINAL_PATH = Paths.get("./src/main/resources/buffer/buffer.txt");
-    private static final Path FILE_COPY_PATH = Paths.get("./src/main/resources/buffer/bufferCopy.txt");
-    private static final Path DIRECTORY_PATH = Paths.get("./src/main/resources/buffer");
+    private static final Path FILE_ORIGINAL_PATH = Paths.get("./src/main/resources/buffer.txt");
+    private static final Path FILE_COPY_PATH = Paths.get("./src/main/resources/bufferCopy.txt");
+    private static final Path DIRECTORY_PATH = Paths.get("./src/main/resources");
     private static final String TEMPLATE = "%s %s";
 
     public static volatile int countConsumed = 0;
