@@ -8,7 +8,7 @@ public class Buffer<T> {
     private static final Path FILE_ORIGINAL_PATH = Paths.get("./src/main/resources/buffer.txt");
     private static final Path FILE_COPY_PATH = Paths.get("./src/main/resources/bufferCopy.txt");
     private static final Path DIRECTORY_PATH = Paths.get("./src/main/resources");
-    private static final int MAX_SIZE = 500;
+    private static final int MAX_SIZE = 30;
 
     public static volatile int countConsumed = 0;
     public static volatile int countProducer = 0;
@@ -25,7 +25,6 @@ public class Buffer<T> {
     public synchronized T get() {
         T result = null;
         if (!lock) {
-            isMaxSizeBuffer();
             originalFileBuffer = readFileBuffer();
             File copyFile = FILE_COPY_PATH.toFile();
             try (ObjectInputStream reader = new ObjectInputStream(new FileInputStream(originalFileBuffer));
@@ -61,6 +60,7 @@ public class Buffer<T> {
     public synchronized void put(T el) {
         if (lock) {
             originalFileBuffer = readFileBuffer();
+            isMaxSizeBuffer();
             try (ObjectOutputStream writer = new ObjectOutputStream(new FileOutputStream(originalFileBuffer))) {
                 writer.writeObject(el);
                 writer.flush();
