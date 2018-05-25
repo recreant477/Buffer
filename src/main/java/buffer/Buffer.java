@@ -3,65 +3,71 @@ package buffer;
 import java.io.*;
 import java.nio.file.*;
 
-public class Buffer {
+public class Buffer<T> {
 
     private static final Path FILE_ORIGINAL_PATH = Paths.get("./src/main/resources/buffer.txt");
     private static final Path FILE_COPY_PATH = Paths.get("./src/main/resources/bufferCopy.txt");
     private static final Path DIRECTORY_PATH = Paths.get("./src/main/resources");
+    private static final int MAX_SIZE = 500;
 
     public static volatile int countConsumed = 0;
     public static volatile int countProducer = 0;
 
     private static volatile boolean lock = true;
-    private static volatile boolean producerWorks = true;
 
+    private boolean producerWorks = true;
     private File originalFileBuffer;
 
     public Buffer() {
         this.originalFileBuffer = this.readFileBuffer();
     }
 
-    public synchronized String get() throws IOException {
-        String result = null;
+    public synchronized T get() {
+        T result = null;
         if (!lock) {
+            isMaxSizeBuffer();
             originalFileBuffer = readFileBuffer();
-            if (originalFileBuffer.length() != 0) {
-                File copy = FILE_COPY_PATH.toFile();
-                BufferedReader br = new BufferedReader(new FileReader(originalFileBuffer));
-                BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(copy));
-
-                if ((result = br.readLine()) != null) {
-                    String newLine;
-                    while ((newLine = br.readLine()) != null) {
-                        bufferedWriter.write(String.valueOf(newLine) + "\n");
+            File copyFile = FILE_COPY_PATH.toFile();
+            try (ObjectInputStream reader = new ObjectInputStream(new FileInputStream(originalFileBuffer));
+                 ObjectOutputStream writer = new ObjectOutputStream(new FileOutputStream(copyFile))) {
+                if ((result = (T) reader.readObject()) != null) {
+                    ++countConsumed;
+                    T newLine;
+                    while ((newLine = (T) reader.readObject()) != null) {
+                        writer.writeObject(newLine);
                     }
-                    br.close();
-                    bufferedWriter.close();
-
-                    originalFileBuffer.delete();
-                    copy.renameTo(originalFileBuffer);
-                    lock = true;
-                    countConsumed++;
                 }
+            } catch (IOException | ClassNotFoundException e) {
+                //Не обрабатываем
             }
+            originalFileBuffer.delete();
+            copyFile.renameTo(originalFileBuffer);
+            this.notifyAll();
+            lock = true;
         }
-
         return result;
     }
 
-    public synchronized void put(String el) {
+    private synchronized void isMaxSizeBuffer() {
+        if (MAX_SIZE <= originalFileBuffer.length()) {
+            try {
+                this.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public synchronized void put(T el) {
         if (lock) {
             originalFileBuffer = readFileBuffer();
-            try (FileWriter writer = new FileWriter(originalFileBuffer)) {
-                writer.write(el);
-                writer.write(el + "\n");
+            try (ObjectOutputStream writer = new ObjectOutputStream(new FileOutputStream(originalFileBuffer))) {
+                writer.writeObject(el);
                 writer.flush();
-
-                countProducer++;
-                lock = false;
+                ++countProducer;
             } catch (IOException ex) {
-                System.out.println(ex.getMessage());
             }
+            lock = false;
         }
     }
 
@@ -99,7 +105,6 @@ public class Buffer {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     public synchronized File getOriginalFileBuffer() {

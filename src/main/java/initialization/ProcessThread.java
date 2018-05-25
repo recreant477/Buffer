@@ -39,6 +39,7 @@ public class ProcessThread {
             System.out.println(String.format(TIME_WORKS, diff));
             System.out.println(String.format(END_TIME, getEndTime(diff)));
         }
+        buffer.removeBuffer();
     }
 
     private long getTimeDifference(Calendar startTime) {

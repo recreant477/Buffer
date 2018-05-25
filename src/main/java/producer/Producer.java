@@ -2,15 +2,15 @@ package producer;
 
 import buffer.Buffer;
 
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 
 public class Producer implements Runnable {
 
     private static final Calendar startTime = Calendar.getInstance();
     private static final String FORMAT = "yyyy-MM-dd HH:mm:ss.SSS";
-    private static final int MAX_SIZE = 30;
 
-    private static volatile int i = 0;
     private final Buffer buffer;
 
     private int operatingFrequency;
@@ -25,12 +25,10 @@ public class Producer implements Runnable {
     @Override
     public void run() {
         while (isValidMaxTime()) {
-            String res = String.valueOf(System.currentTimeMillis());
+            String res = new SimpleDateFormat(FORMAT).format(new Date());
             produce();
-            System.out.println(res);
             buffer.put(res);
         }
-        System.out.println("Вышел producer " + i++);
         buffer.setProducerWorks(false);
     }
 
