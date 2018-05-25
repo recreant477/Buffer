@@ -7,6 +7,9 @@ import java.io.IOException;
 public class Consumer implements Runnable {
 
     private final Buffer buffer;
+    private static final String TEMPLATE = "%s %s";
+
+    private static volatile int  i = 0;
 
     public Consumer(Buffer buffer) {
         this.buffer = buffer;
@@ -16,16 +19,15 @@ public class Consumer implements Runnable {
     public void run() {
         while (buffer.isProducerWorks() || buffer.getOriginalFileBuffer().length() != 0) {
             try {
-                synchronized (buffer) {
-                    if (buffer.getOriginalFileBuffer().length() > 0) {
-                        System.out.println(buffer.get());
-                    }
-                    buffer.notifyAll();
+                String res = buffer.get();
+                if (res != null) {
+                    System.out.println(String.format(TEMPLATE, res, Thread.currentThread().getName()));
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
+        System.out.println("Вышел потреб " + i++);
         buffer.removeBuffer();
     }
 }

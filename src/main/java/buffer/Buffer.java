@@ -8,70 +8,84 @@ public class Buffer {
     private static final Path FILE_ORIGINAL_PATH = Paths.get("./src/main/resources/buffer.txt");
     private static final Path FILE_COPY_PATH = Paths.get("./src/main/resources/bufferCopy.txt");
     private static final Path DIRECTORY_PATH = Paths.get("./src/main/resources");
-    private static final String TEMPLATE = "%s %s";
 
     public static volatile int countConsumed = 0;
     public static volatile int countProducer = 0;
 
-    private volatile boolean producerWorks = true;
+    private static volatile boolean lock = true;
+    private static volatile boolean producerWorks = true;
 
     private File originalFileBuffer;
 
     public Buffer() {
-        try {
-            this.originalFileBuffer = this.readFileBuffer();
-        } catch (IOException e) {
-            System.out.println("Ошибка ввода вывода");
-        }
+        this.originalFileBuffer = this.readFileBuffer();
     }
 
     public synchronized String get() throws IOException {
-        File original = this.readFileBuffer();
-        File copy = FILE_COPY_PATH.toFile();
-        String result = "";
+        String result = null;
+        if (!lock) {
+            originalFileBuffer = readFileBuffer();
+            if (originalFileBuffer.length() != 0) {
+                File copy = FILE_COPY_PATH.toFile();
+                BufferedReader br = new BufferedReader(new FileReader(originalFileBuffer));
+                BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(copy));
 
-        try (BufferedReader br = new BufferedReader(new FileReader(original));
-             BufferedWriter bufferedWriter = new BufferedWriter(new FileWriter(copy))) {
-            if ((result = br.readLine()) != null) {
-                String newLine;
-                while ((newLine = br.readLine()) != null) {
-                    bufferedWriter.write(String.valueOf(newLine) + "\n");
+                if ((result = br.readLine()) != null) {
+                    String newLine;
+                    while ((newLine = br.readLine()) != null) {
+                        bufferedWriter.write(String.valueOf(newLine) + "\n");
+                    }
+                    br.close();
+                    bufferedWriter.close();
+
+                    originalFileBuffer.delete();
+                    copy.renameTo(originalFileBuffer);
+                    lock = true;
+                    countConsumed++;
                 }
-                countConsumed++;
             }
-        } catch (IOException ex) {
-            System.out.println(ex.getMessage());
         }
-        original.delete();
-        copy.renameTo(original);
 
-        return String.format(TEMPLATE, result, Thread.currentThread().getName());
+        return result;
     }
 
-    public synchronized void put(String el) throws IOException {
-        try (FileWriter writer = new FileWriter(this.readFileBuffer())) {
-            writer.write(el);
-            writer.write(el + "\n");
-            writer.flush();
-        } catch (IOException ex) {
-            System.out.println(ex.getMessage());
+    public synchronized void put(String el) {
+        if (lock) {
+            originalFileBuffer = readFileBuffer();
+            try (FileWriter writer = new FileWriter(originalFileBuffer)) {
+                writer.write(el);
+                writer.write(el + "\n");
+                writer.flush();
+
+                countProducer++;
+                lock = false;
+            } catch (IOException ex) {
+                System.out.println(ex.getMessage());
+            }
         }
-        countProducer++;
     }
 
-    private File readFileBuffer() throws IOException {
-        createDirectory();
+    private synchronized File readFileBuffer() {
+        try {
+            createDirectory();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return getFileBuffer();
     }
 
-    private File getFileBuffer() throws IOException {
-        if (!Files.exists(FILE_ORIGINAL_PATH, LinkOption.NOFOLLOW_LINKS)) {
-            return Files.createFile(FILE_ORIGINAL_PATH).toFile();
+    private synchronized File getFileBuffer() {
+        if (!Files.exists(FILE_ORIGINAL_PATH)) {
+            try {
+                return Files.createFile(FILE_ORIGINAL_PATH).toFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         return FILE_ORIGINAL_PATH.toFile();
     }
 
-    private void createDirectory() throws IOException {
+    private synchronized void createDirectory() throws IOException {
         if (!Files.exists(DIRECTORY_PATH, LinkOption.NOFOLLOW_LINKS)) {
             Files.createDirectory(FileSystems.getDefault().getPath(DIRECTORY_PATH.toString()));
         }
@@ -85,6 +99,7 @@ public class Buffer {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
     }
 
     public synchronized File getOriginalFileBuffer() {
