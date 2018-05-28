@@ -3,7 +3,7 @@ package buffer;
 import java.io.*;
 import java.nio.file.*;
 
-public class Buffer<T> {
+public class Buffer {
 
     private static final Path FILE_ORIGINAL_PATH = Paths.get("./src/main/resources/buffer.txt");
     private static final Path FILE_COPY_PATH = Paths.get("./src/main/resources/bufferCopy.txt");
@@ -22,7 +22,7 @@ public class Buffer<T> {
         this.originalFileBuffer = this.readFileBuffer();
     }
 
-    public synchronized T get() {
+    public synchronized <T> T get() {
         T result = null;
         if (!lock) {
             originalFileBuffer = readFileBuffer();
@@ -57,7 +57,7 @@ public class Buffer<T> {
         }
     }
 
-    public synchronized void put(T el) {
+    public synchronized <T> void put(T el) {
         if (lock) {
             originalFileBuffer = readFileBuffer();
             isMaxSizeBuffer();
